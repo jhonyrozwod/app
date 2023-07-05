@@ -1,27 +1,50 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+  <div>
+    <Header />
+    <CandleStickChart v-if="candles.length > 0" :candles="candles" />
+  </div>
 </template>
 
 <script lang="ts">
-import { Options, Vue } from 'vue-class-component';
-import HelloWorld from './components/HelloWorld.vue';
+import { Options, Vue } from "vue-class-component";
+import { getModule } from "vuex-module-decorators";
+import io from "socket.io-client";
+import { createToast } from "mosha-vue-toastify";
+import "mosha-vue-toastify/dist/style.css";
+import CandleStickChart from "./components/CandleStickChart.vue";
+import Header from "./components/Header.vue";
+import store from "./store";
+import CandleStore from "./store/modules/CandleStore";
+import Candle from "./models/Candle";
 
 @Options({
   components: {
-    HelloWorld,
+    Header,
+    CandleStickChart,
   },
 })
-export default class App extends Vue {}
+export default class App extends Vue {
+  candleStore = getModule(CandleStore, store);
+  socket = io("http://localhost:3000");
+
+  mounted() {
+    this.candleStore.loadInitialCandles();
+
+    this.socket.on("newCandle", (msg: any) => {
+      const candle = new Candle(msg);
+      this.candleStore.addCandle(candle);
+      createToast("New candle arrived!", { type: "info" });
+    });
+  }
+
+  get candles() {
+    return this.candleStore.candles;
+  }
+}
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+body {
+  margin: 0;
 }
 </style>
